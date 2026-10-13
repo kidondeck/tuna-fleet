@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>金枪鱼围网船队动态</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{color-scheme:light}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:#f2f2f7;color:#1c1c1e;padding-bottom:40px}
+header{background:linear-gradient(135deg,#0a4d8c,#1273c4);color:#fff;padding:20px 16px 16px}
+header h1{font-size:20px;font-weight:700}
+header .sub{font-size:12px;opacity:.85;margin-top:6px}
+.stats{display:flex;gap:10px;margin-top:12px}
+.stat{flex:1;background:rgba(255,255,255,.14);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:16px}
+.stat span{font-size:11px;opacity:.85}
+.search{position:sticky;top:0;z-index:9;padding:10px 12px;background:#f2f2f7}
+.search input{width:100%;padding:11px 14px;border:none;border-radius:12px;font-size:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);outline:none}
+.company{margin:12px 12px 0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.company-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fafafc;font-weight:600;font-size:15px;border-bottom:1px solid #f0f0f2}
+.company-meta{font-size:12px;color:#8e8e93;font-weight:400}
+.ship{padding:12px 14px;border-bottom:1px solid #f5f5f7}
+.ship:last-child{border-bottom:none}
+.ship-head{display:flex;align-items:center;gap:8px}
+.ship-name{font-weight:600;font-size:16px;flex:1}
+.ship-total{font-size:14px;font-weight:600;color:#0a4d8c;white-space:nowrap}
+.badge{font-size:10px;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.badge.active{background:#e6f7ec;color:#1a9e4b}
+.badge.repair{background:#fdeceb;color:#d63030}
+.badge.idle{background:#fff6e0;color:#c98a00}
+.badge.unknown{background:#f0f0f2;color:#8e8e93}
+.ship-line{font-size:12px;color:#636366;margin-top:5px}
+.ship-remark{font-size:12px;color:#8e8e93;margin-top:4px;line-height:1.5}
+.bars{display:flex;gap:3px;align-items:flex-end;margin-top:8px;height:66px}
+.cell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-width:0}
+.cell em{font-size:8px;font-style:normal;color:#636366;white-space:nowrap;transform:scale(.92)}
+.cell em.znum{color:#c7c7cc}
+.cell i{width:100%;border-radius:2px;background:#1273c4;display:block}
+.cell i.zero{background:#e5e5ea}
+.cell b{font-size:9px;color:#aeaeb2;font-weight:400}
+.voyage{margin-top:10px}
+.voyage-bar{height:6px;background:#f0f0f2;border-radius:99px;overflow:hidden}
+.voyage-bar i{display:block;height:100%;border-radius:99px;background:#34c759}
+.voyage-bar i.mid{background:#ff9f0a}
+.voyage-bar i.high{background:#ff453a}
+.voyage-text{font-size:11px;color:#8e8e93;margin-top:4px}
+.hidden{display:none}
+footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-height:1.8}
+/* 登录页 */
+#authView{max-width:400px;margin:60px auto;padding:0 20px}
+.auth-card{background:#fff;border-radius:16px;padding:28px 24px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.auth-card h2{font-size:20px;margin-bottom:4px}
+.auth-card .tip{font-size:13px;color:#8e8e93;margin-bottom:20px}
+.auth-card input{width:100%;padding:12px 14px;border:1px solid #e5e5ea;border-radius:10px;font-size:16px;margin-bottom:12px;outline:none}
+.auth-card input:focus{border-color:#1273c4}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:16px;font-weight:600;background:#1273c4;color:#fff;cursor:pointer}
+.btn.secondary{background:#f2f2f7;color:#1273c4;margin-top:10px}
+.msg{font-size:13px;margin-top:12px;min-height:18px;text-align:center}
+.msg.err{color:#d63030}
+.msg.ok{color:#1a9e4b}
+.topbar{display:flex;justify-content:flex-end;padding:8px 12px 0}
+.topbar button{background:none;border:none;color:#0a4d8c;font-size:13px;text-decoration:underline;cursor:pointer}
+.center-note{max-width:400px;margin:80px auto;text-align:center;color:#636366;font-size:14px;line-height:2;padding:0 24px}
+</style>
+</head>
+<body>
+
+<!-- 登录/注册 -->
+<div id="authView" class="hidden">
+  <div class="auth-card">
+    <h2>🐟 金枪鱼围网船队动态</h2>
+    <div class="tip">注册后需管理员审批方可查看数据</div>
+    <input id="email" type="email" placeholder="邮箱" autocomplete="email">
+    <input id="password" type="password" placeholder="密码（至少6位）" autocomplete="current-password">
+    <button class="btn" onclick="signIn()">登录</button>
+    <button class="btn secondary" onclick="signUp()">注册新账号</button>
+    <div class="msg" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- 数据页 -->
+<div id="appView" class="hidden">
+  <div class="topbar"><span id="whoami" style="font-size:12px;color:#8e8e93;margin-right:10px"></span><button onclick="signOut()">退出登录</button></div>
+  <header>
+    <h1>🐟 金枪鱼围网船队速查</h1>
+    <div class="sub" id="metaLine"></div>
+    <div class="stats" id="statRow"></div>
+  </header>
+  <div class="search"><input id="q" type="search" placeholder="搜索船名 / 公司…" oninput="filterShips()"></div>
+  <div id="list"></div>
+  <footer>航次进度按 27 个月（2年3个月）船期估算，手动登记的回国时间优先<br>数据由专人维护 · 未经授权请勿转发</footer>
+</div>
+
+<div id="pendingView" class="hidden">
+  <div class="center-note">✅ 注册成功！<br>你的账号正在等待管理员审批，审批通过后即可查看船队数据。<br><br><button class="btn secondary" style="max-width:200px;margin:0 auto" onclick="signOut()">退出</button></div>
+</div>
+
+<script>
+/* ===== 配置：部署时填入 Supabase 项目信息 ===== */
+const SUPABASE_URL = "https://wegeqbehcqaalschdmlv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_l-BIHduRcbcz-fcB2muRXA_ovJCfPUH";
+/* ============================================ */
+
+const VOYAGE_MONTHS = 27;
+const MONTHS = ["1","2","3","4","5","6","7","8","9","10","11","12"];
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function show(id){ ["authView","appView","pendingView"].forEach(v=>document.getElementById(v).classList.toggle("hidden", v!==id)); }
+function msg(t, ok){ const m=document.getElementById("authMsg"); m.textContent=t; m.className="msg "+(ok?"ok":"err"); }
+
+async function signIn(){
+  const {error} = await sb.auth.signInWithPassword({email:email.value.trim(), password:password.value});
+  if(error) msg("登录失败："+error.message); else init();
+}
+async function signUp(){
+  if(password.value.length<6) return msg("密码至少6位");
+  const {error} = await sb.auth.signUp({email:email.value.trim(), password:password.value});
+  if(error) msg("注册失败："+error.message); else init();
+}
+async function signOut(){ await sb.auth.signOut(); show("authView"); }
+
+async function init(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ show("authView"); return; }
+  document.getElementById("whoami").textContent = session.user.email;
+  const {data, error} = await sb.from("snapshots").select("payload").eq("id",1).single();
+  if(error || !data){ show("pendingView"); return; }   /* RLS 拦截 = 未审批 */
+  render(data.payload);
+  show("appView");
+}
+
+/* ---- 航次推算（与 Mac 端 make_snapshot.py 同规则） ---- */
+function addMonths(y,m,d,delta){ let t=m-1+delta; return {y:y+Math.floor(t/12), m:t%12+1, d:Math.min(d,28)}; }
+function parseDep(dep, year){
+  if(!dep) return null;
+  const mm = String(dep).match(/(\d{1,2})\s*月/); if(!mm) return null;
+  const s=String(dep), day = s.includes("上")?5:(s.includes("下")?25:15);
+  return {y:year, m:+mm[1], d:day};
+}
+function parseEta(eta){
+  if(!eta) return null;
+  const mm = String(eta).match(/(\d{4})\s*年\s*(\d{1,2})/); if(!mm) return null;
+  return {y:+mm[1], m:+mm[2], d:15};
+}
+function toDate(o){ return new Date(o.y, o.m-1, o.d); }
+function inferStart(s, year, curMonth){
+  const p = s.production_2026||{}; let start=null, run=0;
+  for(let m=1;m<=curMonth;m++){
+    const v=p[String(m)];
+    if(v===null||v===undefined) continue;
+    if(v===0) run++;
+    else { if(run>=2) start={y:year,m:m,d:15}; run=0; }
+  }
+  return start || parseDep(s.dynamic&&s.dynamic.DEP, year);
+}
+function voyageInfo(s, year, curMonth){
+  if(s.area!=="中西太平洋") return null;
+  let etaRaw = s.dynamic&&s.dynamic.ETA;
+  if(etaRaw) etaRaw = String(etaRaw).replace(/[（(]\s*预计回国\s*[)）]/g,"").trim();
+  const etaDate = parseEta(etaRaw);
+  let start = inferStart(s, year, curMonth);
+  let estimated=false;
+  if(!start && etaDate) start = addMonths(etaDate.y, etaDate.m, etaDate.d, -VOYAGE_MONTHS);
+  if(!start && !etaRaw) return null;
+  if(!etaRaw && start){ const e=addMonths(start.y,start.m,start.d,VOYAGE_MONTHS); etaRaw=`${e.y}年${e.m}月`; etaDate=e; estimated=true; }
+  let pct=null;
+  if(start){
+    const today=new Date();
+    const span = etaDate ? (toDate(etaDate)-toDate(start))/86400000 : VOYAGE_MONTHS*30.44;
+    if(span>0) pct = Math.max(0, Math.min(100, (today-toDate(start))/86400000/span*100));
+  }
+  return {start, etaText:etaRaw, pct, estimated};
+}
+function shipStatus(s, curMonth){
+  const p=s.production_2026||{};
+  const text=((s.dynamic&&s.dynamic.REMARK)||"")+" "+(s.production_note||"");
+  let last=null;
+  for(let m=1;m<=curMonth;m++){ const v=p[String(m)]; if(v!==null&&v!==undefined) last=v; }
+  if(/修理|故障|停港|休渔/.test(text) && (last===0||last===null)) return "repair";
+  if(last>0) return "active";
+  if(last===0) return "idle";
+  return "unknown";
+}
+
+/* ---- 渲染 ---- */
+function esc(s){ return s==null?"":String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function render(data){
+  const meta=data.meta, ships=data.ships;
+  const year=meta.data_year||2026;
+  const now=new Date();
+  const curMonth = now.getFullYear()===year ? now.getMonth()+1 : 12;
+  const wcp=ships.filter(s=>s.area==="中西太平洋"), atl=ships.filter(s=>s.area==="大西洋");
+  const totalOf=ss=>ss.reduce((t,s)=>t+Object.values(s.production_2026||{}).reduce((a,v)=>a+(typeof v==="number"?v:0),0),0);
+  document.getElementById("metaLine").textContent=`数据截至 ${meta.last_updated} · 共 ${ships.length} 艘（中西太 ${wcp.length} / 大西洋 ${atl.length}）`;
+  document.getElementById("statRow").innerHTML=
+    `<div class="stat"><b>${totalOf(wcp).toLocaleString()}</b><span>中西太累计产量(吨)</span></div>`+
+    `<div class="stat"><b>${totalOf(atl).toLocaleString()}</b><span>大西洋累计产量(吨)</span></div>`+
+    `<div class="stat"><b>${wcp.filter(s=>shipStatus(s,curMonth)==="active").length}</b><span>中西太在生产船</span></div>`;
+  const groups={};
+  ships.forEach(s=>{ const k=s.area+"|"+(s.company||"未分类"); (groups[k]=groups[k]||[]).push(s); });
+  const keys=Object.keys(groups).sort((a,b)=>{
+    const [areaA]=a.split("|"),[areaB]=b.split("|");
+    if(areaA!==areaB) return areaA==="中西太平洋"?-1:1;
+    return totalOf(groups[b])-totalOf(groups[a]);
+  });
+  document.getElementById("list").innerHTML = keys.map(k=>{
+    const [area,comp]=k.split("|"), ss=groups[k];
+    const badges={repair:'<span class="badge repair">在修/停航</span>',active:'<span class="badge active">生产中</span>',idle:'<span class="badge idle">当月未产</span>',unknown:'<span class="badge unknown">暂无数据</span>'};
+    const rows=ss.map(s=>{
+      const st=shipStatus(s,curMonth), d=s.dynamic||{}, p=s.production_2026||{};
+      const total=Object.values(p).reduce((a,v)=>a+(typeof v==="number"?v:0),0);
+      const timeline=["ETA","ARR","ETD","DEP"].filter(f=>d[f]).map(f=>`${f} ${d[f]}`).join(" · ");
+      let bars="";
+      const vals=Object.values(p).filter(v=>typeof v==="number");
+      if(vals.length){
+        const mx=Math.max(...vals)||1;
+        bars='<div class="bars">'+MONTHS.slice(0,curMonth).map(m=>{
+          const v=p[m];
+          if(v===null||v===undefined) return `<div class="cell"><em></em><i style="height:2px;background:#e5e5ea"></i><b>${m}</b></div>`;
+          const h=Math.max(2,Math.round(v/mx*40));
+          return `<div class="cell"><em${v===0?' class="znum"':""}>${v}</em><i class="${v===0?"zero":""}" style="height:${h}px"></i><b>${m}</b></div>`;
+        }).join("")+'</div>';
+      }
+      let voyage="";
+      const v=voyageInfo(s,year,curMonth);
+      if(v){
+        const etaLabel=v.estimated?`估算回国 ${v.etaText}（27个月船期）`:`预计回国 ${v.etaText}`;
+        const startLabel=v.start?`出发 ${v.start.y}年${v.start.m}月`:"";
+        if(v.pct!==null){
+          const lvl=v.pct>=80?"high":(v.pct>=50?"mid":"");
+          voyage=`<div class="voyage"><div class="voyage-bar"><i class="${lvl}" style="width:${Math.round(v.pct)}%"></i></div><div class="voyage-text">航次 ${Math.round(v.pct)}% · ${startLabel} · ${esc(etaLabel)}</div></div>`;
+        } else {
+          voyage=`<div class="voyage-text" style="margin-top:6px">${startLabel} · ${esc(etaLabel)}</div>`;
+        }
+      }
+      return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}">
+        <div class="ship-head"><span class="ship-name">${esc(s.name)}</span>${badges[st]}<span class="ship-total">${total.toLocaleString()} 吨</span></div>
+        ${timeline?`<div class="ship-line">${esc(timeline)}</div>`:""}
+        ${d.REMARK?`<div class="ship-remark">${esc(d.REMARK)}</div>`:""}
+        ${bars}${voyage}</div>`;
+    }).join("");
+    return `<div class="company"><div class="company-head"><span>${esc(comp)}</span><span class="company-meta">${area} · ${ss.length}艘 · ${totalOf(ss).toLocaleString()}吨</span></div>${rows}</div>`;
+  }).join("");
+}
+function filterShips(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  document.querySelectorAll(".ship").forEach(el=>el.classList.toggle("hidden", q && el.dataset.search.toLowerCase().indexOf(q)<0));
+  document.querySelectorAll(".company").forEach(c=>c.classList.toggle("hidden", !c.querySelector(".ship:not(.hidden)")));
+}
+init();
+</script>
+</body>
+</html>
