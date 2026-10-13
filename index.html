@@ -72,8 +72,8 @@ footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-heigh
   <div class="auth-card">
     <h2>🐟 金枪鱼围网船队动态</h2>
     <div class="tip">注册后需管理员审批方可查看数据</div>
-    <input id="email" type="email" placeholder="邮箱" autocomplete="email">
-    <input id="password" type="password" placeholder="密码（至少6位）" autocomplete="current-password">
+    <input id="email" type="email" placeholder="邮箱" autocomplete="email" onkeydown="if(event.key==='Enter')signIn()">
+    <input id="password" type="password" placeholder="密码（至少6位）" autocomplete="current-password" onkeydown="if(event.key==='Enter')signIn()">
     <button class="btn" onclick="signIn()">登录</button>
     <button class="btn secondary" onclick="signUp()">注册新账号</button>
     <div class="msg" id="authMsg"></div>
@@ -111,13 +111,17 @@ function show(id){ ["authView","appView","pendingView"].forEach(v=>document.getE
 function msg(t, ok){ const m=document.getElementById("authMsg"); m.textContent=t; m.className="msg "+(ok?"ok":"err"); }
 
 async function signIn(){
+  msg("登录中…", true);
   const {error} = await sb.auth.signInWithPassword({email:email.value.trim(), password:password.value});
   if(error) msg("登录失败："+error.message); else init();
 }
 async function signUp(){
   if(password.value.length<6) return msg("密码至少6位");
-  const {error} = await sb.auth.signUp({email:email.value.trim(), password:password.value});
-  if(error) msg("注册失败："+error.message); else init();
+  msg("提交中…", true);
+  const {data, error} = await sb.auth.signUp({email:email.value.trim(), password:password.value});
+  if(error){ msg("注册失败："+error.message); return; }
+  if(data && data.session){ show("pendingView"); }   /* 免邮箱验证：直接进待审批页 */
+  else { password.value=""; msg("✅ 信息提交成功，待管理员审核", true); }   /* 需邮箱验证或未建会话 */
 }
 async function signOut(){ await sb.auth.signOut(); show("authView"); }
 
