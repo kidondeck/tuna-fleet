@@ -159,7 +159,7 @@ function voyageInfo(s, year, curMonth){
   if(s.area!=="中西太平洋") return null;
   let etaRaw = s.dynamic&&s.dynamic.ETA;
   if(etaRaw) etaRaw = String(etaRaw).replace(/[（(]\s*预计回国\s*[)）]/g,"").trim();
-  const etaDate = parseEta(etaRaw);
+  let etaDate = parseEta(etaRaw);
   let start = inferStart(s, year, curMonth);
   let estimated=false;
   if(!start && etaDate) start = addMonths(etaDate.y, etaDate.m, etaDate.d, -VOYAGE_MONTHS);
