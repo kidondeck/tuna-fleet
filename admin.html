@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>审批管理 · 金枪鱼围网船队</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC",sans-serif;background:#f2f2f7;color:#1c1c1e;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:20px 14px 60px}
+h1{font-size:20px;padding:10px 4px 16px}
+.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px}
+.card input{width:100%;padding:12px 14px;border:1px solid #e5e5ea;border-radius:10px;font-size:16px;margin-bottom:10px;outline:none}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:16px;font-weight:600;background:#1273c4;color:#fff;cursor:pointer}
+.msg{font-size:13px;color:#d63030;margin-top:8px;text-align:center;min-height:18px}
+.user-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f0f0f2}
+.user-row:last-child{border-bottom:none}
+.user-info{flex:1;min-width:0}
+.user-email{font-size:15px;font-weight:600;word-break:break-all}
+.user-time{font-size:12px;color:#8e8e93;margin-top:2px}
+.approve{padding:8px 16px;border:none;border-radius:8px;background:#1a9e4b;color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.revoke{padding:8px 16px;border:none;border-radius:8px;background:#fdeceb;color:#d63030;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.section{font-size:13px;color:#8e8e93;padding:14px 4px 8px;font-weight:600}
+.empty{text-align:center;color:#aeaeb2;font-size:14px;padding:20px 0}
+.topbar{display:flex;justify-content:flex-end;padding:4px}
+.topbar button{background:none;border:none;color:#0a4d8c;font-size:13px;text-decoration:underline;cursor:pointer}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🐟 用户审批管理</h1>
+
+  <div id="loginCard" class="card hidden">
+    <input id="email" type="email" placeholder="管理员邮箱" onkeydown="if(event.key==='Enter')signIn()">
+    <input id="password" type="password" placeholder="密码" onkeydown="if(event.key==='Enter')signIn()">
+    <button class="btn" onclick="signIn()">登录</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="adminView" class="hidden">
+    <div class="topbar"><button onclick="signOut()">退出登录</button></div>
+    <div class="section">待审批（<span id="pendingCount">0</span>）</div>
+    <div class="card" id="pendingList"><div class="empty">加载中…</div></div>
+    <div class="section">已通过（<span id="approvedCount">0</span>）</div>
+    <div class="card" id="approvedList"><div class="empty">加载中…</div></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://wegeqbehcqaalschdmlv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_l-BIHduRcbcz-fcB2muRXA_ovJCfPUH";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function showLogin(){ loginCard.classList.remove("hidden"); adminView.classList.add("hidden"); }
+function showAdmin(){ loginCard.classList.add("hidden"); adminView.classList.remove("hidden"); }
+function msg(t){ document.getElementById("msg").textContent = t; }
+
+async function signIn(){
+  msg("登录中…");
+  const {error} = await sb.auth.signInWithPassword({email:email.value.trim(), password:password.value});
+  if(error){ msg("登录失败："+error.message); return; }
+  loadLists();
+}
+async function signOut(){ await sb.auth.signOut(); showLogin(); }
+
+function fmtTime(t){ return t ? new Date(t).toLocaleString("zh-CN",{hour12:false}) : ""; }
+
+async function loadLists(){
+  const {data, error} = await sb.from("profiles").select("*").order("created_at",{ascending:false});
+  if(error){ msg("读取失败："+error.message+"（当前账号无管理员权限）"); showLogin(); return; }
+  showAdmin();
+  const pending = data.filter(u=>!u.approved), approved = data.filter(u=>u.approved);
+  pendingCount.textContent = pending.length;
+  approvedCount.textContent = approved.length;
+  pendingList.innerHTML = pending.length ? pending.map(u=>`
+    <div class="user-row">
+      <div class="user-info"><div class="user-email">${u.email||"(无邮箱)"}</div><div class="user-time">注册于 ${fmtTime(u.created_at)}</div></div>
+      <button class="approve" onclick="setApproved('${u.id}',true)">通过</button>
+    </div>`).join("") : '<div class="empty">暂无待审批用户</div>';
+  approvedList.innerHTML = approved.length ? approved.map(u=>`
+    <div class="user-row">
+      <div class="user-info"><div class="user-email">${u.email||"(无邮箱)"}</div><div class="user-time">通过于 ${fmtTime(u.created_at)}</div></div>
+      <button class="revoke" onclick="setApproved('${u.id}',false)">移除</button>
+    </div>`).join("") : '<div class="empty">暂无已通过用户</div>';
+}
+
+async function setApproved(id, val){
+  const {error} = await sb.from("profiles").update({approved:val}).eq("id",id);
+  if(error) alert("操作失败："+error.message);
+  loadLists();
+}
+
+(async()=>{ const {data:{session}} = await sb.auth.getSession(); session ? loadLists() : showLogin(); })();
+</script>
+</body>
+</html>
