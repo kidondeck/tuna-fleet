@@ -20,8 +20,9 @@ header .sub{font-size:12px;opacity:.85;margin-top:6px}
 .search input{width:100%;padding:11px 14px;border:none;border-radius:12px;font-size:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);outline:none}
 .filters{display:flex;gap:8px;margin-top:8px}
 .filters select{flex:1;min-width:0;padding:9px 10px;border:none;border-radius:10px;font-size:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);color:#1c1c1e;outline:none}
-.eta-n{display:flex;align-items:center;gap:4px;font-size:13px;color:#636366;white-space:nowrap}
-.eta-n input{width:52px;padding:9px 6px;border:none;border-radius:10px;font-size:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);outline:none;text-align:center}
+.eta-n{flex:1;min-width:0;display:flex;align-items:center;gap:4px;padding:9px 10px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:14px;color:#1c1c1e;white-space:nowrap}
+.eta-n input{width:56px;min-width:0;border:none;outline:none;font-size:14px;text-align:center;background:transparent;color:#1273c4;font-weight:600}
+.eta-back{border:none;background:none;color:#8e8e93;font-size:16px;padding:0 2px;cursor:pointer;margin-left:auto;line-height:1}
 .company{margin:12px 12px 0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .company-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fafafc;font-weight:600;font-size:15px;border-bottom:1px solid #f0f0f2}
 .company-meta{font-size:12px;color:#8e8e93;font-weight:400}
@@ -96,17 +97,17 @@ footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-heigh
     <input id="q" type="search" placeholder="搜索船名 / 公司…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" oninput="filterShips()">
     <div class="filters">
       <select id="fOwner" onchange="filterShips()"><option value="">全部船东</option></select>
-      <select id="fEta" onchange="filterShips()">
+      <select id="fEta" onchange="etaSelChanged()">
         <option value="">全部返航时间</option>
         <option value="returned">已返航</option>
         <option value="m3">3个月内返航</option>
         <option value="m6">半年内返航</option>
         <option value="m12">一年内返航</option>
         <option value="over1y">一年以上返航</option>
-        <option value="custom">自定义 N 个月内…</option>
+        <option value="custom">自定义</option>
         <option value="none">暂无返航信息</option>
       </select>
-      <span class="eta-n hidden" id="etaCustom"><input id="fEtaN" type="number" min="1" max="72" inputmode="numeric" placeholder="N" oninput="filterShips()">个月</span>
+      <span class="eta-n hidden" id="etaCustom"><input id="fEtaN" type="number" min="1" max="72" inputmode="numeric" placeholder="N" oninput="filterShips()"><span>个月内</span><button type="button" class="eta-back" onclick="resetEtaCustom()" title="返回选择">×</button></span>
     </div>
   </div>
   <div id="list"></div>
@@ -287,10 +288,16 @@ function render(data){
     return `<div class="company"><div class="company-head"><span>${esc(comp)}</span><span class="company-meta">${area} · ${ss.length}艘 · ${totalOf(ss).toLocaleString()}吨</span></div>${rows}</div>`;
   }).join("");
 }
+function etaSelChanged(){
+  filterShips();
+  if(document.getElementById("fEta").value==="custom"){ const n=document.getElementById("fEtaN"); n.focus(); }
+}
+function resetEtaCustom(){ document.getElementById("fEta").value=""; filterShips(); }
 function filterShips(){
   const q=document.getElementById("q").value.trim().toLowerCase();
   const owner=document.getElementById("fOwner").value;
   const eta=document.getElementById("fEta").value;
+  document.getElementById("fEta").classList.toggle("hidden", eta==="custom");
   document.getElementById("etaCustom").classList.toggle("hidden", eta!=="custom");
   const etaN=parseInt(document.getElementById("fEtaN").value,10);
   const now=new Date();
