@@ -18,6 +18,8 @@ header .sub{font-size:12px;opacity:.85;margin-top:6px}
 .stat span{font-size:11px;opacity:.85}
 .search{position:sticky;top:0;z-index:9;padding:10px 12px;background:#f2f2f7}
 .search input{width:100%;padding:11px 14px;border:none;border-radius:12px;font-size:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);outline:none}
+.filters{display:flex;gap:8px;margin-top:8px}
+.filters select{flex:1;min-width:0;padding:9px 10px;border:none;border-radius:10px;font-size:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);color:#1c1c1e;outline:none}
 .company{margin:12px 12px 0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .company-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fafafc;font-weight:600;font-size:15px;border-bottom:1px solid #f0f0f2}
 .company-meta{font-size:12px;color:#8e8e93;font-weight:400}
@@ -88,7 +90,21 @@ footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-heigh
     <div class="sub" id="metaLine"></div>
     <div class="stats" id="statRow"></div>
   </header>
-  <div class="search"><input id="q" type="search" placeholder="搜索船名 / 公司…" oninput="filterShips()"></div>
+  <div class="search">
+    <input id="q" type="search" placeholder="搜索船名 / 公司…" oninput="filterShips()">
+    <div class="filters">
+      <select id="fOwner" onchange="filterShips()"><option value="">全部船东</option></select>
+      <select id="fEta" onchange="filterShips()">
+        <option value="">全部返航时间</option>
+        <option value="returned">已返航</option>
+        <option value="m3">3个月内返航</option>
+        <option value="m6">半年内返航</option>
+        <option value="m12">一年内返航</option>
+        <option value="over1y">一年以上返航</option>
+        <option value="none">暂无返航信息</option>
+      </select>
+    </div>
+  </div>
   <div id="list"></div>
   <footer>航次进度按 27 个月（2年3个月）船期估算，手动登记的回国时间优先<br>数据由FEI维护 · 未经授权请勿转发</footer>
 </div>
@@ -177,7 +193,7 @@ function voyageInfo(s, year, curMonth){
     const span = etaDate ? (toDate(etaDate)-toDate(start))/86400000 : VOYAGE_MONTHS*30.44;
     if(span>0) pct = Math.max(0, Math.min(100, (today-toDate(start))/86400000/span*100));
   }
-  return {start, etaText:etaRaw, pct, estimated};
+  return {start, etaText:etaRaw, etaDate, pct, estimated};
 }
 function shipStatus(s, curMonth){
   const p=s.production_2026||{};
@@ -188,6 +204,21 @@ function shipStatus(s, curMonth){
   if(last>0) return "active";
   if(last===0) return "idle";
   return "unknown";
+}
+/* 判断船目前是否在国内（ARR 之后没有再次出渔场/恢复生产才算"已返航"） */
+function parseMon(v){
+  if(!v) return null;
+  const s=String(v);
+  const iso=s.match(/^(\d{4})-(\d{1,2})-/); if(iso) return +iso[2];
+  const mm=s.match(/(\d{1,2})\s*月/); return mm?+mm[1]:null;
+}
+function isHome(s, curMonth){
+  const d=s.dynamic||{}; if(!d.ARR) return false;
+  const am=parseMon(d.ARR); if(am===null) return true;
+  const dm=parseMon(d.DEP); if(dm!==null && dm>=am) return false;
+  const p=s.production_2026||{};
+  for(let m=am+1;m<=curMonth;m++){ const v=p[String(m)]; if(typeof v==="number"&&v>0) return false; }
+  return true;
 }
 
 /* ---- 渲染 ---- */
@@ -211,6 +242,8 @@ function render(data){
     if(areaA!==areaB) return areaA==="中西太平洋"?-1:1;
     return totalOf(groups[b])-totalOf(groups[a]);
   });
+  const ownerSel=document.getElementById("fOwner"), curOwner=ownerSel.value;
+  ownerSel.innerHTML='<option value="">全部船东</option>'+[...new Set(keys.map(k=>k.split("|")[1]))].map(c=>`<option value="${esc(c)}"${c===curOwner?" selected":""}>${esc(c)}</option>`).join("");
   document.getElementById("list").innerHTML = keys.map(k=>{
     const [area,comp]=k.split("|"), ss=groups[k];
     const badges={repair:'<span class="badge repair">在修/停航</span>',active:'<span class="badge active">生产中</span>',idle:'<span class="badge idle">当月未产</span>',unknown:'<span class="badge unknown">暂无数据</span>'};
@@ -241,7 +274,7 @@ function render(data){
           voyage=`<div class="voyage-text" style="margin-top:6px">${startLabel} · ${esc(etaLabel)}</div>`;
         }
       }
-      return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}">
+      return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}" data-owner="${esc(comp)}" data-eta="${v&&v.etaDate?v.etaDate.y+"-"+String(v.etaDate.m).padStart(2,"0"):""}" data-returned="${isHome(s,curMonth)?"1":""}">
         <div class="ship-head"><span class="ship-name">${esc(s.name)}</span>${badges[st]}<span class="ship-total">${total.toLocaleString()} 吨</span></div>
         ${timeline?`<div class="ship-line">${esc(timeline)}</div>`:""}
         ${d.REMARK?`<div class="ship-remark">${esc(d.REMARK)}</div>`:""}
@@ -252,7 +285,25 @@ function render(data){
 }
 function filterShips(){
   const q=document.getElementById("q").value.trim().toLowerCase();
-  document.querySelectorAll(".ship").forEach(el=>el.classList.toggle("hidden", q && el.dataset.search.toLowerCase().indexOf(q)<0));
+  const owner=document.getElementById("fOwner").value;
+  const eta=document.getElementById("fEta").value;
+  const now=new Date();
+  const etaDays=e=>{ if(!e) return null; const[a,b]=e.split("-").map(Number); return (new Date(a,b-1,15)-now)/86400000; };
+  document.querySelectorAll(".ship").forEach(el=>{
+    let hide = q && el.dataset.search.toLowerCase().indexOf(q)<0;
+    if(!hide && owner) hide = el.dataset.owner!==owner;
+    if(!hide && eta){
+      const dd=etaDays(el.dataset.eta), ret=el.dataset.returned==="1";
+      if(eta==="returned") hide=!ret;
+      else if(eta==="none") hide=ret||dd!==null;
+      else if(ret||dd===null) hide=true;
+      else if(eta==="m3") hide=dd>92;
+      else if(eta==="m6") hide=dd>183;
+      else if(eta==="m12") hide=dd>365;
+      else if(eta==="over1y") hide=dd<=365;
+    }
+    el.classList.toggle("hidden", !!hide);
+  });
   document.querySelectorAll(".company").forEach(c=>c.classList.toggle("hidden", !c.querySelector(".ship:not(.hidden)")));
 }
 init();
