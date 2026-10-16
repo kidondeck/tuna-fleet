@@ -18,9 +18,17 @@ header .sub{font-size:12px;opacity:.85;margin-top:6px}
 .stat span{font-size:11px;opacity:.85}
 .search{position:sticky;top:0;z-index:9;padding:10px 12px;background:#f2f2f7}
 .search input{width:100%;padding:11px 14px;border:none;border-radius:12px;font-size:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);outline:none}
-.filters{display:flex;gap:8px;margin-top:8px}
-.filters select{flex:1;min-width:0;padding:9px 10px;border:none;border-radius:10px;font-size:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);color:#1c1c1e;outline:none}
-.eta-n{flex:1;min-width:0;display:flex;align-items:center;gap:4px;padding:9px 10px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:14px;color:#1c1c1e;white-space:nowrap}
+.search-row{display:flex;gap:8px}
+.search-row input{flex:1}
+.filter-btn{padding:0 16px;border:none;border-radius:12px;font-size:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);color:#1c1c1e;cursor:pointer;white-space:nowrap}
+.filter-btn.on{background:#1273c4;color:#fff}
+.filter-panel{margin-top:8px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:10px 12px}
+.frow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.frow:last-child{margin-bottom:0}
+.frow label{width:56px;font-size:13px;color:#636366;flex-shrink:0}
+.frow select{flex:1;min-width:0;padding:9px 10px;border:1px solid #e5e5ea;border-radius:10px;font-size:14px;background:#f9f9fb;color:#1c1c1e;outline:none}
+.fclear{width:100%;padding:8px;border:none;border-radius:10px;background:#f2f2f7;color:#d63030;font-size:13px;cursor:pointer}
+.eta-n{flex:1;min-width:0;display:flex;align-items:center;gap:4px;padding:9px 10px;border:1px solid #e5e5ea;border-radius:10px;background:#f9f9fb;font-size:14px;color:#1c1c1e;white-space:nowrap}
 .eta-n input{width:56px;min-width:0;border:none;outline:none;font-size:14px;text-align:center;background:transparent;color:#1273c4;font-weight:600}
 .eta-back{border:none;background:none;color:#8e8e93;font-size:16px;padding:0 2px;cursor:pointer;margin-left:auto;line-height:1}
 .company{margin:12px 12px 0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -94,10 +102,13 @@ footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-heigh
     <div class="stats" id="statRow"></div>
   </header>
   <div class="search">
-    <input id="q" type="search" placeholder="搜索船名 / 公司…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" oninput="filterShips()">
-    <div class="filters">
-      <select id="fOwner" onchange="filterShips()"><option value="">全部船东</option></select>
-      <select id="fEta" onchange="etaSelChanged()">
+    <div class="search-row">
+      <input id="q" type="search" placeholder="搜索船名 / 公司…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" oninput="filterShips()">
+      <button id="filterBtn" class="filter-btn" onclick="toggleFilterPanel()">筛选</button>
+    </div>
+    <div class="filter-panel hidden" id="filterPanel">
+      <div class="frow"><label>船东</label><select id="fOwner" onchange="filterShips()"><option value="">全部船东</option></select></div>
+      <div class="frow"><label>返航时间</label><select id="fEta" onchange="etaSelChanged()">
         <option value="">全部返航时间</option>
         <option value="returned">已返航</option>
         <option value="m3">3个月内返航</option>
@@ -106,8 +117,15 @@ footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-heigh
         <option value="over1y">一年以上返航</option>
         <option value="custom">自定义</option>
         <option value="none">暂无返航信息</option>
-      </select>
-      <span class="eta-n hidden" id="etaCustom"><input id="fEtaN" type="number" min="1" max="72" inputmode="numeric" placeholder="N" oninput="filterShips()"><span>个月内</span><button type="button" class="eta-back" onclick="resetEtaCustom()" title="返回选择">×</button></span>
+      </select><span class="eta-n hidden" id="etaCustom"><input id="fEtaN" type="number" min="1" max="72" inputmode="numeric" placeholder="N" oninput="filterShips()"><span>个月内</span><button type="button" class="eta-back" onclick="resetEtaCustom()" title="返回选择">×</button></span></div>
+      <div class="frow"><label>状态</label><select id="fStatus" onchange="filterShips()">
+        <option value="">全部状态</option>
+        <option value="active">生产中</option>
+        <option value="repair">在修/停航</option>
+        <option value="idle">当月未产</option>
+        <option value="unknown">暂无数据</option>
+      </select></div>
+      <div class="frow"><button class="fclear" onclick="clearFilters()">清除全部筛选</button></div>
     </div>
   </div>
   <div id="list"></div>
@@ -281,7 +299,7 @@ function render(data){
           voyage=`<div class="voyage-text" style="margin-top:6px">${startLabel} · ${esc(etaLabel)}</div>`;
         }
       }
-      return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}" data-owner="${esc(comp)}" data-eta="${v&&v.etaDate?v.etaDate.y+"-"+String(v.etaDate.m).padStart(2,"0"):""}" data-returned="${isHome(s,curMonth)?"1":""}">
+      return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}" data-owner="${esc(comp)}" data-eta="${v&&v.etaDate?v.etaDate.y+"-"+String(v.etaDate.m).padStart(2,"0"):""}" data-returned="${isHome(s,curMonth)?"1":""}" data-status="${st}">
         <div class="ship-head">${badges[st]}<span class="ship-name">${esc(s.name)}</span><span class="ship-total">${total.toLocaleString()} 吨</span></div>
         ${timeline?`<div class="ship-line">${esc(timeline)}</div>`:""}
         ${d.REMARK?`<div class="ship-remark">${esc(d.REMARK)}</div>`:""}
@@ -289,6 +307,22 @@ function render(data){
     }).join("");
     return `<div class="company"><div class="company-head"><span>${esc(comp)}</span><span class="company-meta">${area} · ${ss.length}艘 · ${totalOf(ss).toLocaleString()}吨</span></div>${rows}</div>`;
   }).join("");
+}
+function toggleFilterPanel(){
+  document.getElementById("filterPanel").classList.toggle("hidden");
+}
+function updateFilterBtn(){
+  const n=(document.getElementById("fOwner").value?1:0)+(document.getElementById("fEta").value?1:0)+(document.getElementById("fStatus").value?1:0);
+  const b=document.getElementById("filterBtn");
+  b.textContent=n?`筛选·${n}`:"筛选";
+  b.classList.toggle("on", n>0);
+}
+function clearFilters(){
+  document.getElementById("fOwner").value="";
+  document.getElementById("fEta").value="";
+  document.getElementById("fStatus").value="";
+  document.getElementById("fEtaN").value="";
+  filterShips();
 }
 function etaSelChanged(){
   filterShips();
@@ -299,6 +333,7 @@ function filterShips(){
   const q=document.getElementById("q").value.trim().toLowerCase();
   const owner=document.getElementById("fOwner").value;
   const eta=document.getElementById("fEta").value;
+  const status=document.getElementById("fStatus").value;
   document.getElementById("fEta").classList.toggle("hidden", eta==="custom");
   document.getElementById("etaCustom").classList.toggle("hidden", eta!=="custom");
   const etaN=parseInt(document.getElementById("fEtaN").value,10);
@@ -307,6 +342,7 @@ function filterShips(){
   document.querySelectorAll(".ship").forEach(el=>{
     let hide = q && el.dataset.search.toLowerCase().indexOf(q)<0;
     if(!hide && owner) hide = el.dataset.owner!==owner;
+    if(!hide && status) hide = el.dataset.status!==status;
     if(!hide && eta){
       const dd=etaDays(el.dataset.eta), ret=el.dataset.returned==="1";
       if(eta==="returned") hide=!ret;
@@ -321,6 +357,7 @@ function filterShips(){
     el.classList.toggle("hidden", !!hide);
   });
   document.querySelectorAll(".company").forEach(c=>c.classList.toggle("hidden", !c.querySelector(".ship:not(.hidden)")));
+  updateFilterBtn();
 }
 init();
 </script>
