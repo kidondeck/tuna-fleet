@@ -205,7 +205,7 @@ function shipStatus(s, curMonth){
   const text=((s.dynamic&&s.dynamic.REMARK)||"")+" "+(s.production_note||"");
   let last=null;
   for(let m=1;m<=curMonth;m++){ const v=p[String(m)]; if(v!==null&&v!==undefined) last=v; }
-  if(/修理|故障|停港|休渔/.test(text) && (last===0||last===null)) return "repair";
+  if(/修理|修船|故障|停港|休渔/.test(text) && (last===0||last===null)) return "repair";
   if(last>0) return "active";
   if(last===0) return "idle";
   return "unknown";
