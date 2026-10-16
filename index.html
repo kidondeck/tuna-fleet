@@ -111,7 +111,7 @@ footer{text-align:center;font-size:11px;color:#aeaeb2;margin-top:18px;line-heigh
     </div>
   </div>
   <div id="list"></div>
-  <footer>航次进度按 27 个月（2年3个月）船期估算，手动登记的回国时间优先<br>数据由FEI维护 · 未经授权请勿转发</footer>
+  <footer>航次进度按 24 个月（2年）船期估算，手动登记的回国时间优先<br>数据由FEI维护 · 未经授权请勿转发</footer>
 </div>
 
 <div id="pendingView" class="hidden">
@@ -124,7 +124,7 @@ const SUPABASE_URL = "https://wegeqbehcqaalschdmlv.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_l-BIHduRcbcz-fcB2muRXA_ovJCfPUH";
 /* ============================================ */
 
-const VOYAGE_MONTHS = 27;
+const VOYAGE_MONTHS = 24;
 const MONTHS = ["1","2","3","4","5","6","7","8","9","10","11","12"];
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -272,7 +272,7 @@ function render(data){
       let voyage="";
       const v=voyageInfo(s,year,curMonth);
       if(v){
-        const etaLabel=v.estimated?`估算回国 ${v.etaText}（27个月船期）`:`预计回国 ${v.etaText}`;
+        const etaLabel=v.estimated?`估算回国 ${v.etaText}（24个月船期）`:`预计回国 ${v.etaText}`;
         const startLabel=v.start?`出发 ${v.start.y}年${v.start.m}月`:"";
         if(v.pct!==null){
           const lvl=v.pct>=80?"high":(v.pct>=50?"mid":"");
