@@ -250,8 +250,10 @@ function render(data){
   const ownerSel=document.getElementById("fOwner"), curOwner=ownerSel.value;
   ownerSel.innerHTML='<option value="">全部船东</option>'+[...new Set(keys.map(k=>k.split("|")[1]))].map(c=>`<option value="${esc(c)}"${c===curOwner?" selected":""}>${esc(c)}</option>`).join("");
   document.getElementById("list").innerHTML = keys.map(k=>{
-    const [area,comp]=k.split("|"), ss=groups[k];
-    const badges={repair:'<span class="badge repair">在修/停航</span>',active:'<span class="badge active">生产中</span>',idle:'<span class="badge idle">当月未产</span>',unknown:'<span class="badge unknown">暂无数据</span>'};
+    const [area,comp]=k.split("|"), ss0=groups[k];
+    const sRank={active:0,repair:1,idle:2,unknown:3};
+    const ss=[...ss0].sort((a,b)=>sRank[shipStatus(a,curMonth)]-sRank[shipStatus(b,curMonth)]);
+    const badges={repair:'<span class="badge repair">修船中</span>',active:'<span class="badge active">生产中</span>',idle:'<span class="badge idle">当月未产</span>',unknown:'<span class="badge unknown">暂无数据</span>'};
     const rows=ss.map(s=>{
       const st=shipStatus(s,curMonth), d=s.dynamic||{}, p=s.production_2026||{};
       const total=Object.values(p).reduce((a,v)=>a+(typeof v==="number"?v:0),0);
@@ -280,7 +282,7 @@ function render(data){
         }
       }
       return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}" data-owner="${esc(comp)}" data-eta="${v&&v.etaDate?v.etaDate.y+"-"+String(v.etaDate.m).padStart(2,"0"):""}" data-returned="${isHome(s,curMonth)?"1":""}">
-        <div class="ship-head"><span class="ship-name">${esc(s.name)}</span>${badges[st]}<span class="ship-total">${total.toLocaleString()} 吨</span></div>
+        <div class="ship-head">${badges[st]}<span class="ship-name">${esc(s.name)}</span><span class="ship-total">${total.toLocaleString()} 吨</span></div>
         ${timeline?`<div class="ship-line">${esc(timeline)}</div>`:""}
         ${d.REMARK?`<div class="ship-remark">${esc(d.REMARK)}</div>`:""}
         ${bars}${voyage}</div>`;
