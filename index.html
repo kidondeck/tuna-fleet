@@ -38,7 +38,11 @@ header .sub{font-size:12px;opacity:.85;margin-top:6px}
 .ship{padding:12px 14px;border-bottom:1px solid #f5f5f7}
 .ship:last-child{border-bottom:none}
 .ship-head{display:flex;align-items:center;gap:8px}
-.ship-name{font-weight:600;font-size:16px;flex:1}
+.ship-name{font-weight:600;font-size:16px;flex:1;position:relative}
+.ship-name.has-specs{cursor:pointer;border-bottom:1px dashed #c7c7cc}
+.ship-tip{display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:20;background:#1c1c1e;color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:400;line-height:1.9;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.ship-tip .k{color:#98989d;display:inline-block;width:60px}
+.ship-name:hover .ship-tip,.ship-name.show-tip .ship-tip{display:block}
 .ship-total{font-size:14px;font-weight:600;color:#0a4d8c;white-space:nowrap}
 .badge{font-size:10px;padding:3px 8px;border-radius:99px;white-space:nowrap}
 .badge.active{background:#e6f7ec;color:#1a9e4b}
@@ -303,8 +307,13 @@ function render(data){
           voyage=`<div class="voyage-text" style="margin-top:6px">${startLabel} · ${esc(etaLabel)}</div>`;
         }
       }
+      const sp=s.specs||{};
+      const tipRows=["船长","呼号","建造年份"].filter(k=>sp[k]).map(k=>`<div><span class="k">${k}</span>${esc(sp[k])}</div>`).join("");
+      const nameHtml=tipRows
+        ? `<span class="ship-name has-specs" onclick="event.stopPropagation();this.classList.toggle('show-tip')">${esc(s.name)}<span class="ship-tip">${tipRows}</span></span>`
+        : `<span class="ship-name">${esc(s.name)}</span>`;
       return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}" data-owner="${esc(comp)}" data-eta="${v&&v.etaDate?v.etaDate.y+"-"+String(v.etaDate.m).padStart(2,"0"):""}" data-returned="${isHome(s,curMonth)?"1":""}" data-status="${st}">
-        <div class="ship-head">${badges[st]}<span class="ship-name">${esc(s.name)}</span><span class="ship-total">${total.toLocaleString()} 吨</span></div>
+        <div class="ship-head">${badges[st]}${nameHtml}<span class="ship-total">${total.toLocaleString()} 吨</span></div>
         ${timeline?`<div class="ship-line">${esc(timeline)}</div>`:""}
         ${d.REMARK?`<div class="ship-remark">${esc(d.REMARK)}</div>`:""}
         ${bars}${voyage}</div>`;
