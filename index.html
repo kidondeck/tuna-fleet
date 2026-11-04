@@ -271,12 +271,10 @@ function render(data){
     `<div class="stat"><b>${totalOf(atl).toLocaleString()}</b><span>大西洋累计产量(吨)</span></div>`+
     `<div class="stat"><b>${wcp.filter(s=>shipStatus(s,curMonth)==="active").length}</b><span>中西太在生产船</span></div>`;
   const groups={};
-  ships.forEach(s=>{ const k=s.area+"|"+(s.company||"未分类"); (groups[k]=groups[k]||[]).push(s); });
-  const keys=Object.keys(groups).sort((a,b)=>{
-    const [areaA]=a.split("|"),[areaB]=b.split("|");
-    if(areaA!==areaB) return areaA==="中西太平洋"?-1:1;
-    return totalOf(groups[b])-totalOf(groups[a]);
-  });
+  const firstIdx={};
+  ships.forEach((s,i)=>{ const k=s.area+"|"+(s.company||"未分类"); (groups[k]=groups[k]||[]).push(s); if(!(k in firstIdx)) firstIdx[k]=i; });
+  /* 船东顺序 = 原始表格顺序（按船在数据里首次出现的位置），中西太在前、大西洋在后 */
+  const keys=Object.keys(groups).sort((a,b)=>firstIdx[a]-firstIdx[b]);
   const ownerSel=document.getElementById("fOwner"), curOwner=ownerSel.value;
   ownerSel.innerHTML='<option value="">全部船东</option>'+[...new Set(keys.map(k=>k.split("|")[1]))].map(c=>`<option value="${esc(c)}"${c===curOwner?" selected":""}>${esc(c)}</option>`).join("");
   document.getElementById("list").innerHTML = keys.map(k=>{
