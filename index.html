@@ -188,9 +188,13 @@ async function init(){
 function addMonths(y,m,d,delta){ let t=m-1+delta; return {y:y+Math.floor(t/12), m:t%12+1, d:Math.min(d,28)}; }
 function parseDep(dep, year){
   if(!dep) return null;
-  const mm = String(dep).match(/(\d{1,2})\s*月/); if(!mm) return null;
-  const s=String(dep), day = s.includes("上")?5:(s.includes("下")?25:15);
-  return {y:year, m:+mm[1], d:day};
+  const s=String(dep);
+  let mm=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(mm) return {y:+mm[1], m:+mm[2], d:+mm[3]};
+  mm=s.match(/(?:(\d{4})\s*年\s*)?(\d{1,2})\s*月/);
+  if(!mm) return null;
+  const day = s.includes("上")?5:(s.includes("下")?25:15);
+  return {y:mm[1]?+mm[1]:year, m:+mm[2], d:day};
 }
 function parseEta(eta){
   if(!eta) return null;
