@@ -283,7 +283,6 @@ function render(data){
     const rows=ss.map(s=>{
       const st=shipStatus(s,curMonth), d=s.dynamic||{}, p=s.production_2026||{};
       const total=Object.values(p).reduce((a,v)=>a+(typeof v==="number"?v:0),0);
-      const timeline=["ETA","ARR","ETD","DEP"].filter(f=>d[f]).map(f=>`${f} ${d[f]}`).join(" · ");
       let bars="";
       const vals=Object.values(p).filter(v=>typeof v==="number");
       if(vals.length){
@@ -314,7 +313,6 @@ function render(data){
         : `<span class="ship-name">${esc(s.name)}</span>`;
       return `<div class="ship" data-search="${esc(s.name)} ${esc(comp)} ${esc(area)}" data-owner="${esc(comp)}" data-eta="${v&&v.etaDate?v.etaDate.y+"-"+String(v.etaDate.m).padStart(2,"0"):""}" data-returned="${isHome(s,curMonth)?"1":""}" data-status="${st}">
         <div class="ship-head">${badges[st]}${nameHtml}<span class="ship-total">${total.toLocaleString()} 吨</span></div>
-        ${timeline?`<div class="ship-line">${esc(timeline)}</div>`:""}
         ${d.REMARK?`<div class="ship-remark">${esc(d.REMARK)}</div>`:""}
         ${bars}${voyage}</div>`;
     }).join("");
